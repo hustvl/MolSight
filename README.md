@@ -36,11 +36,15 @@ Accurately translating molecular images into machine-readable formats (like SMIL
   * **[2025-11-26]** 🎉 MolSight has been accepted to **AAAI 2026**\!
   * **[2025-11-26]** 🚀 Code released.
 
-## 🛠️ Getting Started
+## Updates
+
+- [x] Release code
+- [x] Release Stereo-200k dataset
+- [x] Release model weights
+
+## Getting Started
 
 ### Installation
-
-Clone the repository and install the required dependencies:
 
 ```bash
 # Clone the repository
@@ -51,58 +55,93 @@ cd MolSight
 pip install -r requirements.txt
 ```
 
-### Data Preparation
+## Data
+### Training Datasets
+1. Pretrain dataset: [MolParser-7M](https://huggingface.co/datasets/UniParser/MolParser-7M)
+2. SFT datasets: [PubChem-1M](https://huggingface.co/yujieq/MolScribe/blob/main/pubchem.zip), [USPTO-680k](https://huggingface.co/yujieq/MolScribe/blob/main/uspto_mol.zip)
+3. RL dataset: [Stereo-200k](https://huggingface.co/datasets/Robert-zwr/Stereo-200k)
+### Evaluation Datasets
++ USPTO, UoB, CLEF, JPO: [images](https://github.com/Kohulan/OCSR_Review/tree/master/assets/images), [labels](https://github.com/Kohulan/OCSR_Review/tree/master/assets/reference), we also provided [labels in SMILES format](https://github.com/hustvl/MolSight/tree/main/data/real).
++ [Stereo-2k](https://huggingface.co/datasets/Robert-zwr/Stereo-200k)
 
-*Note: The **Stereo-200k** dataset will be released shortly. Please check the [Updates](https://www.google.com/search?q=%23-news) section.*
+**Notes:**
+The Stereo dataset is introduced for the first time in this work, consisting entirely of stereoisomeric molecules.
 
-## 🚀 Training
+## Weights
+<table class="center">
+<tr>
+  <td style="text-align:center;"><b>Name</b></td>
+  <td style="text-align:center;"><b>Predict Field</b></td>
+  <td style="text-align:center;"><b>Description</b></td>
+  <td style="text-align:center;"><b>Acc. on USPTO</b></td>
+</tr>
+    
+<tr>
+  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/epoch_49.pth">MolSight-base</a></td>
+  <td style="text-align:center;"><b>SMILES & edge</b></td>
+  <td style="text-align:center;"><b>Trained on PubChem-1M and USPTO-680k for 10 epochs.</b></td>
+  <td style="text-align:center;"><b>91.2</b></td>
+</tr>
+    
+<tr>
+  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/pubchem_coords_10_2.pth">MolSight-coord</a></td>
+  <td style="text-align:center;"><b>SMILES & edge & coord</b></td>
+  <td style="text-align:center;"><b>Continue trained on PubChem-1M for 2 epochs to get a coord head.</b></td>
+  <td style="text-align:center;"><b>91.1</b></td>
+</tr>
 
-MolSight employs a multi-stage training pipeline. You can reproduce the training process using the provided scripts:
+<tr>
+  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/stereo_grpo_10_2.pth">MolSight-stereo</a></td>
+  <td style="text-align:center;"><b>SMILES</b></td>
+  <td style="text-align:center;"><b>Continue trained on Stereo-200k with LoRA for 2 epochs to get better performance on stereo molecules.</b></td>
+  <td style="text-align:center;"><b>90.3</b></td>
+</tr>
 
-**1. Supervised Fine-Tuning (SFT)**
-Train the backbone model using multi-granularity learning:
+<tr>
+  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/pubchem_uspto_smiles_edges_30.pth">MolSight-extra</a></td>
+  <td style="text-align:center;"><b>SMILES & edge</b></td>
+  <td style="text-align:center;"><b>Similar to MolSight-base, but with extra training steps (30 epochs), usually can get better evaluation score.</b></td>
+  <td style="text-align:center;"><b>92.0</b></td>
+</tr>
+
+<tr>
+  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/pubchem_uspto_smiles_edges_30.pth">MolSight-Markush</a></td>
+  <td style="text-align:center;"><b>SMILES</b></td>
+  <td style="text-align:center;"><b>Finetuned on <a href="https://huggingface.co/datasets/docling-project/MarkushGrapher-Datasets">MarkushGrapher</a>, can predict SMILES-M to deal with Markush structures.</b></td>
+  <td style="text-align:center;"><b>-</b></td>
+</tr>
+</table>
+
+## Training
+
+Start MolSight training with:
 
 ```bash
+# SFT
 bash train.sh
-```
-
-**2. Coordinate Predictor Training**
-Train the auxiliary coordinate predictor module:
-
-```bash
+# train the additional coord predictor
 bash train_loc_predictor.sh
-```
-
-**3. Reinforcement Learning (RL) Post-Training**
-Optimize the model using GRPO for chemical semantic correctness:
-
-```bash
+# post training with RL
 bash post_train.sh
 ```
 
-## 🧪 Evaluation
+## Citation
 
-To evaluate the model on the benchmark datasets:
+If you Mask-Adapter useful in your research or applications, please consider giving us a star &#127775; and citing it by the following BibTeX entry.
 
-```bash
-# Run evaluation script (ensure model weights are loaded)
-bash eval.sh
-```
-
-## 📝 Citation
-
-If you find MolSight or the Stereo-200k dataset useful for your research in AI4Science or Chemistry, please cite our paper:
-
-```bibtex
-@article{zhang2025molsight,
-  title={MolSight: Optical Chemical Structure Recognition with SMILES Pretraining, Multi-Granularity Learning and Reinforcement Learning},
-  author={Zhang, Wenrui and Wang, Xinggang and Feng, Bin and Liu, Wenyu},
-  journal={arXiv preprint arXiv:2511.17300},
-  year={2025}
+```BibTeX
+@misc{zhang2025molsightopticalchemicalstructure,
+      title={MolSight: Optical Chemical Structure Recognition with SMILES Pretraining, Multi-Granularity Learning and Reinforcement Learning}, 
+      author={Wenrui Zhang and Xinggang Wang and Bin Feng and Wenyu Liu},
+      year={2025},
+      eprint={2511.17300},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2511.17300}, 
 }
 ```
 
-## 📄 License
+## Acknowledgement
 
-This project is licensed under the [Apache 2.0 License](https://www.google.com/search?q=LICENSE).
+This project has referenced some excellent open-sourced repos ([MolScribe](https://github.com/thomas0809/MolScribe), [trl](https://github.com/huggingface/trl), [Whisper](https://github.com/openai/whisper), [MMPose](https://github.com/open-mmlab/mmpose)). Thanks for their wonderful works and contributions to the community.
 

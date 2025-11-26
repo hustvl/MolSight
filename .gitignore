@@ -8,7 +8,6 @@ debug/
 *.ipynb
 .idea
 
-/data
 /runs
 /vis
 /tmp.py
@@ -17,5 +16,4 @@ debug/
 /tmp4.py
 /tmp5.py
 *.safetensors
-*.csv
 *.png

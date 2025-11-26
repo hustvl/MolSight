@@ -136,20 +136,19 @@ class MLP(nn.Module):
 
 # ---------- Main ----------
 def main():
-    seed = 0
-    print(seed)
-    set_seed(seed)
     # 1. Load CSV
     #df = pd.read_csv("MoleculeNet/tox21.csv")  # 应含有列 'smiles' 和一个或多个标签列（如 NR-AR, etc.）
     #task_cols = df.columns.drop(['mol_id', 'smiles'])
     #df = df.dropna()  # 只保留有完整标签的行
 
     dataset_path = 'molecular_property_prediction'
-    dataset_name = 'tox21'
+    dataset_name = 'bbbp'  # bbbp, tox21, toxcast, clintox, sider, muv, hiv, bace,
     # 0: smiles, 1: labels, bbbp 2 classes, 1369 vs 262, 2: 3D position, 11 conformations, 11 * 50 * 3, 3: atom types
     train_smiles, y_train, _, _ = load_lmdb(os.path.join(dataset_path, dataset_name, "train.lmdb"))
     valid_smiles, y_val, _, _ = load_lmdb(os.path.join(dataset_path, dataset_name, "valid.lmdb"))
     test_smiles, y_test, _, _ = load_lmdb(os.path.join(dataset_path,dataset_name, "test.lmdb"))
+
+    print(f"unique labels in y_train: {np.unique(y_train)}")
 
     # 2. Featurization using EfficientViT
     image_encoder = timm.create_model('efficientvit_l1', pretrained=False)
@@ -235,6 +234,8 @@ def main():
         image_features = torch.cat(feats, dim=1)  # [B, C, H, W]
         image_features = image_encoder.point_conv(image_features)
         embed = pooling(image_features).squeeze(-1).squeeze(-1)  # [B, C]
+        # max pooling
+        #embed = torch.max(image_features, dim=-1)[0].max(dim=-1)[0]
         
         return embed[0].detach().cpu().numpy()
 
@@ -260,86 +261,113 @@ def main():
     X_val = scaler.transform(X_val)
     X_test = scaler.transform(X_test)
 
-    print(f"unique labels in y_train: {np.unique(y_train)}")
 
-    # 5. 构建数据集
-    train_set = MoleculeDataset(train_feature_list, y_train, X_train)
-    val_set = MoleculeDataset(valid_feature_list, y_val, X_val)
-    test_set = MoleculeDataset(test_feature_list, y_test, X_test)
+    scores = []
+    for seed in range(5):
+        #seed = 0
+        print(seed)
+        set_seed(seed)
 
-    train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=64)
-    test_loader = DataLoader(test_set, batch_size=64)
+        # 5. 构建数据集
+        train_set = MoleculeDataset(train_feature_list, y_train, X_train)
+        val_set = MoleculeDataset(valid_feature_list, y_val, X_val)
+        test_set = MoleculeDataset(test_feature_list, y_test, X_test)
 
-    # 6. 初始化模型
-    input_dim = 512
-    output_dim = y_train.shape[1]
-    model = MLP(input_dim=input_dim, hidden_dim=512, output_dim=output_dim)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+        train_loader = DataLoader(train_set, batch_size=64, shuffle=True)
+        val_loader = DataLoader(val_set, batch_size=64)
+        test_loader = DataLoader(test_set, batch_size=64)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    #criterion = nn.BCEWithLogitsLoss()
-    def masked_bce_loss(logits, labels):
-        mask = (labels != -1).float()
-        loss_fn = nn.BCEWithLogitsLoss(reduction='none')
-        raw_loss = loss_fn(logits, torch.clamp(labels, min=0.0))
-        loss = raw_loss * mask
-        return loss.sum() / mask.sum()
+        # 6. 初始化模型
+        input_dim = 512
+        output_dim = y_train.shape[1]
+        model = MLP(input_dim=input_dim, hidden_dim=512, output_dim=output_dim)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
 
-    # 7. 训练
-    best_valid_score = 0.0
-    best_test_score = 0.0
-    for epoch in range(20):
-        model.train()
-        total_loss = 0
-        for x, y in train_loader:
-            x, y = x.to(device), y.to(device)
-            logits = model(x)
-            loss = masked_bce_loss(logits, y)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.item()
+        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+        #criterion = nn.BCEWithLogitsLoss()
+        def masked_bce_loss(logits, labels):
+            mask = (labels != -1).float()
+            loss_fn = nn.BCEWithLogitsLoss(reduction='none')
+            raw_loss = loss_fn(logits, torch.clamp(labels, min=0.0))
+            loss = raw_loss * mask
+            return loss.sum() / mask.sum()
 
-        print(f"Epoch {epoch+1} | Train Loss: {total_loss/len(train_loader):.4f}")
+        # 7. 训练
+        best_valid_score = 0.0
+        best_test_score = 0.0
+        for epoch in range(20):
+            model.train()
+            total_loss = 0
+            for x, y in train_loader:
+                x, y = x.to(device), y.to(device)
+                logits = model(x)
+                loss = masked_bce_loss(logits, y)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
 
-        # 8. 评估
-        def evaluate(loader):
-            model.eval()
-            y_true, y_pred = [], []
-            with torch.no_grad():
-                for x, y in loader:
-                    x = x.to(device)
-                    logits = model(x)
-                    prob = torch.sigmoid(logits).cpu().numpy()
-                    y_pred.append(prob)
-                    y_true.append(y.numpy())
+            print(f"Epoch {epoch+1} | Train Loss: {total_loss/len(train_loader):.4f}")
 
-            y_true = np.concatenate(y_true, axis=0)
-            y_pred = np.concatenate(y_pred, axis=0)
+            # 8. 评估
+            def evaluate(loader):
+                model.eval()
+                y_true, y_pred = [], []
+                with torch.no_grad():
+                    for x, y in loader:
+                        x = x.to(device)
+                        logits = model(x)
+                        prob = torch.sigmoid(logits).cpu().numpy()
+                        y_pred.append(prob)
+                        y_true.append(y.numpy())
 
-            print(f"y_true shape: {y_true.shape}, y_pred shape: {y_pred.shape}")
-            aucs = []
-            for i in range(y_true.shape[1]):
-                try:
-                    auc = roc_auc_score(y_true[:, i], y_pred[:, i])
-                    aucs.append(auc)
-                except:
-                    continue
-            return np.nanmean(aucs), aucs
+                # save to csv
+                #out_file = 'results.csv'
+                #out_df = {'y_true': y_true, 'y_pred': [p>0.5 for p in y_pred]}
+                #out_df = pd.DataFrame(out_df)
+                #out_df.to_csv(out_file, index=False)
+                
+                y_true = np.concatenate(y_true, axis=0)
+                y_pred = np.concatenate(y_pred, axis=0)
 
-        val_auc, val_task_aux = evaluate(val_loader)
-        test_auc, task_aucs = evaluate(test_loader)
-        print(f"\nValidation ROC-AUC: {val_auc:.4f}")
-        print(f"validation Per-task AUCs: {val_task_aux}")
-        print(f"Test ROC-AUC: {test_auc:.4f}")
-        print(f"Per-task AUCs: {task_aucs}")
-        if val_auc > best_valid_score:
-            best_valid_score = val_auc
-            best_test_score = test_auc
-        
-    print(f"Best Valid ROC-AUC: {best_valid_score:.4f}, Best Test ROC-AUC: {best_test_score:.4f}\n")
+                print(f"y_true shape: {y_true.shape}, y_pred shape: {y_pred.shape}")
+
+                aucs = []
+                for i in range(y_true.shape[1]):
+                    mask = y_true[:, i] != -1
+                    if mask.sum() > 0:
+                        try:
+                            auc = roc_auc_score(y_true[mask, i], y_pred[mask, i])
+                            aucs.append(auc)
+                        except:
+                            continue
+                return np.nanmean(aucs), aucs
+
+            val_auc, val_task_aux = evaluate(val_loader)
+            test_auc, task_aucs = evaluate(test_loader)
+            print(f"\nValidation ROC-AUC: {val_auc:.4f}")
+            print(f"validation Per-task AUCs: {val_task_aux}")
+            print(f"Test ROC-AUC: {test_auc:.4f}")
+            print(f"Per-task AUCs: {task_aucs}")
+            if val_auc > best_valid_score:
+                best_valid_score = val_auc
+                best_test_score = test_auc
+            
+        scores.append(best_test_score)
+        print(f"Dataset; {dataset_name}, Seed: {seed}, Best Valid ROC-AUC: {best_valid_score:.4f}, Best Test ROC-AUC: {best_test_score:.4f}\n")
+    scores_report = [round(score*100, 2) for score in scores]
+    print(f"Final Scores: {scores_report}")
+    print(f"Average Test ROC-AUC: {np.mean(scores_report):.2f} +- {np.std(scores_report):.2f}")
 
 if __name__ == "__main__":
     main()
+
+# bbbp: 68.0 +- 0.6    (68.3,68.41,66.83,67.9,68.6)
+# tox21: 75.0 +- 0.4    (74.94,74.46,75.2,74.87,75.73)
+# toxcast： 65.0 +- 0.2   (64.94,64.95,65.24,64.74,65.27)
+# sider: 62.6 +- 0.7    (62.02,62.84,63.33,61.65,63.16)
+# clintox: 98.4 +- 0.9    (96.96,99.38,98.66,97.86,98.93)
+# muv: 73.6 +- 1.0    (73.34,72.89,73.26,75.64,72.92)
+# hiv: 74.1 +- 1.1    (73.66,73.08,72.95,75.24,75.43)
+# bace: 76.9 +- 1.6    (78.66, 77.64, 73.99, 76.73, 77.48)
