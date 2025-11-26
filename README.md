@@ -14,7 +14,7 @@ Wenrui Zhang<sup>1</sup> · Xinggang Wang<sup>1</sup> · Bin Feng<sup>1</sup> ·
 
 ## 📖 Introduction
 
-**MolSight** is a comprehensive learning framework for Optical Chemical Structure Recognition (OCSR), designed to bridge the gap between computer vision and chemical informatics (AI4S). [cite\_start] [cite: 1]
+**MolSight** is a comprehensive learning framework for Optical Chemical Structure Recognition (OCSR), designed to bridge the gap between computer vision and chemical informatics (AI4S).
 
 Accurately translating molecular images into machine-readable formats (like SMILES) is critical for drug discovery and digital chemistry. MolSight addresses the limitations of previous methods—particularly in handling complex **stereoisomers**—through a novel three-stage training paradigm:
 
