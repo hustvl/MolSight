@@ -127,17 +127,14 @@ bash post_train.sh
 
 ## Citation
 
-If you Mask-Adapter useful in your research or applications, please consider giving us a star &#127775; and citing it by the following BibTeX entry.
+If you find MolSight or the Stereo-200k dataset useful for your research in AI4Science or Chemistry, please cite our paper:
 
-```BibTeX
-@misc{zhang2025molsightopticalchemicalstructure,
-      title={MolSight: Optical Chemical Structure Recognition with SMILES Pretraining, Multi-Granularity Learning and Reinforcement Learning}, 
-      author={Wenrui Zhang and Xinggang Wang and Bin Feng and Wenyu Liu},
-      year={2025},
-      eprint={2511.17300},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2511.17300}, 
+```bibtex
+@article{zhang2025molsight,
+  title={MolSight: Optical Chemical Structure Recognition with SMILES Pretraining, Multi-Granularity Learning and Reinforcement Learning},
+  author={Zhang, Wenrui and Wang, Xinggang and Feng, Bin and Liu, Wenyu},
+  journal={arXiv preprint arXiv:2511.17300},
+  year={2025}
 }
 ```
 
