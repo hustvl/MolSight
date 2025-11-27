@@ -77,7 +77,7 @@ The Stereo dataset is introduced for the first time in this work, consisting ent
 </tr>
     
 <tr>
-  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/epoch_49.pth">MolSight-base</a></td>
+  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/pubchem_uspto_smiles_edges_10.pth">MolSight-base</a></td>
   <td style="text-align:center;"><b>SMILES & edge</b></td>
   <td style="text-align:center;"><b>Trained on PubChem-1M and USPTO-680k for 10 epochs.</b></td>
   <td style="text-align:center;"><b>91.2</b></td>
@@ -105,7 +105,7 @@ The Stereo dataset is introduced for the first time in this work, consisting ent
 </tr>
 
 <tr>
-  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/pubchem_uspto_smiles_edges_30.pth">MolSight-Markush</a></td>
+  <td style="text-align:center;"><a href="https://huggingface.co/Robert-zwr/MolSight/blob/main/epoch_49.pth">MolSight-Markush</a></td>
   <td style="text-align:center;"><b>SMILES</b></td>
   <td style="text-align:center;"><b>Finetuned on <a href="https://huggingface.co/datasets/docling-project/MarkushGrapher-Datasets">MarkushGrapher</a>, can predict SMILES-M to deal with Markush structures.</b></td>
   <td style="text-align:center;"><b>-</b></td>
