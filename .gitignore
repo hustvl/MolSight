@@ -16,4 +16,4 @@ debug/
 /tmp4.py
 /tmp5.py
 *.safetensors
-*.png
+*.pth

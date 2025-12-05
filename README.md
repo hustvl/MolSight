@@ -41,6 +41,7 @@ Accurately translating molecular images into machine-readable formats (like SMIL
 - [x] Release code
 - [x] Release Stereo-200k dataset
 - [x] Release model weights
+- [x] Release inference demo
 
 ## Getting Started
 
@@ -53,6 +54,11 @@ cd MolSight
 
 # Install dependencies
 pip install -r requirements.txt
+```
+
+### Inference Demo
+```bash
+python inference.py
 ```
 
 ## Data
